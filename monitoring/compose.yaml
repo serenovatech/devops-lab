@@ -1,0 +1,83 @@
+# Monitoring for your real staging app and the lab copy. Run from this folder:
+#   docker compose up -d                       Prometheus :9090, Alertmanager :9093, Grafana :3001
+#   docker compose --profile logging up -d     also Loki and Fluent Bit
+# Grafana login is admin / admin. Expects the Poultry repository at ~/poultry.
+#
+# Host networking lets these reach the app's metrics, which listen only on 127.0.0.1:9100.
+# "restart: unless-stopped" brings them back after a reboot, which the old stack in /root/obs didn't do.
+name: lab-monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    network_mode: host
+    restart: unless-stopped
+    mem_limit: 512m
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts-lab.yml:/etc/prometheus/alerts-lab.yml:ro
+      - ../../poultry/infra/helm/poultry/files/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    network_mode: host
+    restart: unless-stopped
+    mem_limit: 128m
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --cluster.listen-address=
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
+  # Prints alerts to its log, so lab 9 works without a Slack account.
+  alert-log:
+    image: node:22-alpine
+    network_mode: host
+    restart: unless-stopped
+    mem_limit: 64m
+    command: ['node', '/alert-log.js']
+    volumes:
+      - ./alert-log.js:/alert-log.js:ro
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    network_mode: host
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      # Grafana's default port, 3000, is taken by your real app.
+      GF_SERVER_HTTP_PORT: '3001'
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../../poultry/infra/observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../../poultry/infra/helm/poultry/files/dashboards:/var/lib/grafana/dashboards:ro
+
+  loki:
+    image: grafana/loki:3.5.0
+    profiles: [logging]
+    network_mode: host
+    restart: unless-stopped
+    mem_limit: 512m
+
+  # Reads your real app's logs from the VM's journal and nginx's log files, without changing them.
+  fluent-bit:
+    image: fluent/fluent-bit:4.0
+    profiles: [logging]
+    network_mode: host
+    restart: unless-stopped
+    mem_limit: 128m
+    depends_on: [loki]
+    user: root
+    volumes:
+      - ../logging/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/log/nginx:/var/log/nginx:ro
+      - fluent-bit-state:/var/lib/fluent-bit
+
+volumes:
+  prometheus-data:
+  fluent-bit-state:

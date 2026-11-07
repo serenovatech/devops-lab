@@ -1,0 +1,86 @@
+# A smaller version of infra/helm/poultry/templates/deployment.yaml in your Poultry repository.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: poultry
+  namespace: poultry-lab
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    # Starts a new copy before removing an old one, so users see no downtime.
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  selector:
+    matchLabels:
+      app: poultry
+  template:
+    metadata:
+      labels:
+        app: poultry
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: web
+          image: poultry-lab:1.0
+          # Use the image imported into k3s in lab 6 instead of downloading one.
+          imagePullPolicy: Never
+          ports:
+            - { name: http, containerPort: 3000 }
+            - { name: metrics, containerPort: 9100 }
+          env:
+            - { name: APP_ENV, value: staging }
+            - { name: DEMO_ENABLED, value: 'false' }
+            - { name: DB_HOST, value: mysql }
+            - { name: DB_USER, value: root }
+            - { name: DB_NAME, value: poultry_lab }
+            - { name: METRICS_PORT, value: '9100' }
+          envFrom:
+            - secretRef:
+                name: poultry-secrets
+          # Liveness only checks the process. Readiness also checks the database, so a database
+          # problem stops traffic to the pod without restarting it.
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+# One stable address for all copies of the app: http://VM_IP:30080
+apiVersion: v1
+kind: Service
+metadata:
+  name: poultry
+  namespace: poultry-lab
+spec:
+  type: NodePort
+  selector:
+    app: poultry
+  ports:
+    - port: 80
+      targetPort: http
+      nodePort: 30080

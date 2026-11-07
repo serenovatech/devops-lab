@@ -1,0 +1,14 @@
+.env
+
+# Terraform: state can contain secrets and belongs to one machine.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+
+# Your reports describe this VM's weak spots. This repository is public, so they stay on your laptop.
+reports/
+
+# Slack webhook URL for the optional part of lab 9.
+monitoring/slack-webhook-url

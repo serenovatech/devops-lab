@@ -1,0 +1,7 @@
+# Replaces the Poultry repository's .dockerignore for this image, which needs the tests.
+node_modules
+dist
+data
+.git
+.env
+.env.*

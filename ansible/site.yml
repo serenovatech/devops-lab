@@ -1,0 +1,71 @@
+---
+# Adds the missing lab tools to serenova-devops. Run from this folder:
+#   ansible-playbook -i inventory.ini site.yml --ask-become-pass
+# It leaves the staging app, MySQL, nginx and the GitHub runners alone.
+# Run it twice: the second run should report changed=0, which is called idempotence.
+
+- name: Add lab tools to the VM
+  hosts: lab
+  become: true
+
+  tasks:
+    - name: Install helper packages
+      ansible.builtin.apt:
+        name: [curl, jq, htop, tree]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      tags: [base]
+
+    # Docker CE is already installed. Ubuntu's docker.io package would conflict with it, so only check.
+    - name: Check that Docker is present
+      ansible.builtin.command: docker --version
+      changed_when: false
+      tags: [base]
+
+    # Lets VMware see the VM's address and shut it down cleanly.
+    - name: Install VMware Tools
+      ansible.builtin.apt:
+        name: [open-vm-tools, open-vm-tools-desktop]
+        state: present
+      tags: [vmware]
+
+    - name: Keep VMware Tools running
+      ansible.builtin.systemd_service:
+        name: open-vm-tools
+        state: started
+        enabled: true
+      tags: [vmware]
+
+    - name: Add the HashiCorp signing key
+      ansible.builtin.get_url:
+        url: https://apt.releases.hashicorp.com/gpg
+        dest: /etc/apt/keyrings/hashicorp.asc
+        mode: "0644"
+      tags: [terraform]
+
+    - name: Add the HashiCorp package source
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [signed-by=/etc/apt/keyrings/hashicorp.asc]
+          https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main
+        filename: hashicorp
+        state: present
+      tags: [terraform]
+
+    - name: Install Terraform
+      ansible.builtin.apt:
+        name: terraform
+        state: present
+      tags: [terraform]
+
+    # Left off at boot, so it only uses memory during lab 6.
+    - name: Install k3s, a light Kubernetes
+      ansible.builtin.shell: |
+        set -o pipefail
+        curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_ENABLE=true INSTALL_K3S_SKIP_START=true \
+          INSTALL_K3S_EXEC="--disable traefik --disable servicelb --write-kubeconfig-mode 644" sh -s -
+      args:
+        executable: /bin/bash
+        creates: /usr/local/bin/k3s
+      tags: [k3s]

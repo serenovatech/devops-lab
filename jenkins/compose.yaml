@@ -1,0 +1,22 @@
+# Jenkins at http://VM_IP:8081 (nginx already uses 8080). Start it from this folder with:
+#   DOCKER_GID=$(getent group docker | cut -d: -f3) docker compose up -d --build
+#
+# Lab only: access to the Docker socket gives Jenkins full control of the VM.
+services:
+  jenkins:
+    build: .
+    container_name: jenkins
+    restart: unless-stopped
+    mem_limit: 1g
+    environment:
+      JAVA_OPTS: -Xmx512m
+    group_add:
+      - ${DOCKER_GID:?Set DOCKER_GID as shown at the top of this file}
+    ports:
+      - '8081:8080'
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins-home:

@@ -1,0 +1,28 @@
+# Your Poultry repository's alerts.yml is loaded as well. Those rules combine every app Prometheus
+# scrapes, so these rules look at one app at a time and make drills on the lab copy visible.
+groups:
+  - name: poultry-by-app
+    rules:
+      - alert: StagingDown
+        expr: up{job="poultry-staging"} == 0
+        for: 30s
+        labels:
+          severity: page
+        annotations:
+          summary: Prometheus cannot reach the real staging app
+
+      - alert: StagingNotReady
+        expr: pfm_ready{job="poultry-staging"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: The real staging app cannot reach its database
+
+      - alert: LabCopyNotReady
+        expr: pfm_ready{job="poultry-lab"} == 0
+        for: 1m
+        labels:
+          severity: ticket
+        annotations:
+          summary: The lab copy cannot reach its database

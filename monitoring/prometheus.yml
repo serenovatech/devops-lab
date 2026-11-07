@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+  - /etc/prometheus/alerts-lab.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['127.0.0.1:9093']
+
+scrape_configs:
+  - job_name: poultry-staging
+    static_configs:
+      - targets: ['127.0.0.1:9100']
+  # Shows as down whenever the lab copy from compose.yaml is stopped. That's expected.
+  - job_name: poultry-lab
+    static_configs:
+      - targets: ['127.0.0.1:9200']

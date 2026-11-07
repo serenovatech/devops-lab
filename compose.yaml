@@ -1,0 +1,53 @@
+# A separate copy of the Poultry app for experiments, with its own empty database.
+# Your real staging app on port 8080 and its MySQL are not part of this file.
+#   docker compose up -d --build
+#   App http://VM_IP:3200 · metrics on the VM at 127.0.0.1:9200
+# Expects the Poultry repository at ~/poultry. Lab passwords only.
+name: poultry-lab
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    mem_limit: 768m
+    command: ['--innodb-buffer-pool-size=128M']
+    environment:
+      MYSQL_ROOT_PASSWORD: lab-root
+      MYSQL_DATABASE: poultry_lab
+      MYSQL_USER: poultry
+      MYSQL_PASSWORD: lab-only
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-plab-root']
+      interval: 5s
+      retries: 30
+
+  app:
+    build:
+      context: ../poultry
+      args:
+        RELEASE_SHA: compose-lab
+    image: poultry-lab:compose
+    restart: unless-stopped
+    mem_limit: 384m
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      APP_ENV: staging
+      DB_HOST: mysql
+      DB_USER: poultry
+      DB_PASSWORD: lab-only
+      DB_NAME: poultry_lab
+      DEMO_ENABLED: 'false'
+      METRICS_PORT: '9100'
+    ports:
+      - '3200:3000'
+      - '127.0.0.1:9200:9100'
+    volumes:
+      - app-data:/data
+
+volumes:
+  mysql-data:
+  app-data:

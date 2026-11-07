@@ -1,0 +1,2 @@
+# Keep Linux line endings, so scripts written on Windows still run in the VM.
+* text=auto eol=lf
