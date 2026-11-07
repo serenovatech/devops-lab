@@ -4,7 +4,7 @@
 # It leaves the staging app, MySQL, nginx and the GitHub runners alone.
 # Run it twice: the second run should report changed=0, which is called idempotence.
 
-- name: Add lab tools to the VM
+- name: ncdu
   hosts: lab
   become: true
 
