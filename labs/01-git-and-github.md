@@ -68,10 +68,10 @@ git init -b main
 git add . && git commit -m "Start the DevOps lab"
 ```
 
-Create a **public** repository named `devops-lab` on GitHub, without a README, and then:
+Create a **public** repository named `devops-lab` on GitHub, without a README. This guide uses the `serenovatech` organization; use your own account or organization name if it differs. Then:
 
 ```bash
-git remote add origin https://github.com/teenShirt/devops-lab.git
+git remote add origin https://github.com/serenovatech/devops-lab.git
 ```
 
 ```bash
@@ -81,7 +81,7 @@ git push -u origin main
 Then on the VM:
 
 ```bash
-git clone https://github.com/teenShirt/devops-lab.git ~/devops-lab
+git clone https://github.com/serenovatech/devops-lab.git ~/devops-lab
 ```
 
 ```bash

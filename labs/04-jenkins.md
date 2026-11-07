@@ -42,7 +42,7 @@ If any stage fails, the later ones don't run.
 
 1. Choose **New Item**, name it `poultry`, and select **Pipeline**.
 2. Under **Pipeline**, set **Definition** to **Pipeline script from SCM**.
-3. Set **SCM** to **Git**, and enter `https://github.com/teenShirt/devops-lab.git`.
+3. Set **SCM** to **Git**, and enter `https://github.com/serenovatech/devops-lab.git`.
 4. Change **Branch** to `*/main`. The default of `*/master` won't find your branch.
 5. Keep **Script Path** as `Jenkinsfile`, and click **Save**.
 6. Click **Build Now**.
