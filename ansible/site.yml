@@ -4,14 +4,14 @@
 # It leaves the staging app, MySQL, nginx and the GitHub runners alone.
 # Run it twice: the second run should report changed=0, which is called idempotence.
 
-- name: ncdu
+- name: Add lab tools to the VM
   hosts: lab
   become: true
 
   tasks:
     - name: Install helper packages
       ansible.builtin.apt:
-        name: [curl, jq, htop, tree]
+        name: [curl, jq, htop, tree, ncdu]
         state: present
         update_cache: true
         cache_valid_time: 3600
